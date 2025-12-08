@@ -16,16 +16,19 @@ class Router:
     def _add_command(self, command: str):
         self.commands.append(command)
 
-    def add_cable(self, destiny_router, interface: str, ip_address: str):
+    def add_cable(self, destiny_router, interface: str, ip_address: str, network_address: str):
         self._add_command(f"!{destiny_router}")
         self._add_command(f"interface fa0/{interface}")
         self._add_command("no switchport")
         self._add_command(f"ip address {ip_address} 255.255.255.252")
         self._add_command(f"no shutdown")
         self._add_command("exit")
+        self._add_command("router ospf 1")
+        self._add_command(f"network {network_address} 0.0.0.3 area 0")
         self._add_command("!")
 
-    def add_hsrp_receiver(self):
+    def add_hsrp_receiver(self, spot_3: int):
+        self._add_command("! Adding hsrp receiver")
         self._add_command("vlan 10")
         self._add_command("interface fa0/4") # To the PC
         self._add_command("switchport mode access")
@@ -50,7 +53,10 @@ class Router:
         self._add_command(f"standby 10 priority {priority}")
         self._add_command("standby 10 preempt")
         self._add_command("no shutdown")
+        self._add_command("router ospf 1")
+        self._add_command(f"network 192.168.{spot_3}.0 0.0.0.255 area {spot_3}")
         self._add_command("!")
+
     
     
     def print_commands(self):
@@ -58,7 +64,7 @@ class Router:
             print(command)
     
     def dump_commands(self):
-        with open(f"connections/generated/{self.name}.txt", "w") as f:
+        with open(f"Seoul/Configuration/Generated/{self.name}.txt", "w") as f:
             f.write("\n\n\n")
             f.write("\n".join(self.commands))
             f.write("\n\n\n")
@@ -98,13 +104,13 @@ def generate_mesh_wiring_commands(core_routers: dict[str, Router], country_route
         core_interface += 1
 
         for core_router in core_routers.keys():
-
+            network_address = f"10.0.{cable_3_mod}.{cable_4_mod * 4}"
             core_ip = 1 + cable_4_mod * 4
             country_ip = 2 + cable_4_mod * 4
 
             # Cableado de las microredes al core
-            core_routers[core_router].add_cable(country_router, core_interface, f"10.0.{cable_3_mod}.{core_ip}")
-            country_routers[country_router].add_cable(core_router, country_interface, f"10.0.{cable_3_mod}.{country_ip}")
+            core_routers[core_router].add_cable(country_router, core_interface, f"10.0.{cable_3_mod}.{core_ip}", network_address)
+            country_routers[country_router].add_cable(core_router, country_interface, f"10.0.{cable_3_mod}.{country_ip}", network_address)
             country_interface += 1
             cable_4_mod += 1
 
@@ -116,17 +122,17 @@ def generate_mesh_wiring_commands(core_routers: dict[str, Router], country_route
     country_routers[country_router] = Router(country_router)
     country_interface = 1
     for core_router in core_routers.keys():
-
+        network_address = f"10.0.{cable_3_mod}.{cable_4_mod * 4}"
         core_ip = 1 + cable_4_mod * 4
         country_ip = 2 + cable_4_mod * 4
         
         # Cableado de las microredes al core
         if country_router == "Ethernet":
-            core_routers[core_router].add_cable(country_router, 1, f"10.0.{cable_3_mod}.{core_ip}")
+            core_routers[core_router].add_cable(country_router, 1, f"10.0.{cable_3_mod}.{core_ip}", network_address)
         else:
-            core_routers[core_router].add_cable(country_router, core_interface, f"10.0.{cable_3_mod}.{core_ip}")
+            core_routers[core_router].add_cable(country_router, core_interface, f"10.0.{cable_3_mod}.{core_ip}", network_address)
 
-        country_routers[country_router].add_cable(core_router, country_interface, f"10.0.{cable_3_mod}.{country_ip}")
+        country_routers[country_router].add_cable(core_router, country_interface, f"10.0.{cable_3_mod}.{country_ip}", network_address)
         country_interface += 1
         if cable_4_mod == 63:
             cable_4_mod = 0
@@ -149,9 +155,11 @@ def generate_hsrp_commands(country_routers: dict[str, Router]): # Doesnt take in
             priority = 140
 
 def generate_receiver_hsrp_commands(country_receivers: dict[str, Router]):
+    spot_3 = 10
     for key in country_receivers.keys():
+        spot_3 += 10
         if key != "Seoul_receiver":
-            country_receivers[key].add_hsrp_receiver()
+            country_receivers[key].add_hsrp_receiver(spot_3)
 
     
 
