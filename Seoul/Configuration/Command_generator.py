@@ -57,7 +57,22 @@ class Router:
         self._add_command(f"network 192.168.{spot_3}.0 0.0.0.255 area {spot_3}")
         self._add_command("!")
 
-    
+    def add_gre_tunnel(self, tunnel_id: int, tunnel_ip: str, source_interface: str, dest_wan_ip: str):
+        self._add_command(f"! Configuración de Tunel GRE {tunnel_id}")
+        self._add_command(f"interface Tunnel {tunnel_id}")
+
+        self._add_command(f"ip address {tunnel_ip} 255.255.255.252")
+        self._add_command(f"tunnel source fa0/{source_interface}")
+        self._add_command(f"tunnel destination {dest_wan_ip}")
+        
+        self._add_command("ip mtu 1400")
+        self._add_command("ip tcp adjust-mss 1360")
+        
+        self._add_command("ip ospf 1 area 0")
+        
+        self._add_command("no shutdown")
+        self._add_command("exit")
+        self._add_command("!")
     
     def print_commands(self):
         for command in self.commands:
@@ -166,6 +181,8 @@ def generate_receiver_hsrp_commands(country_receivers: dict[str, Router]):
 generate_mesh_wiring_commands(core_routers, country_routers) 
 generate_hsrp_commands(country_routers)
 generate_receiver_hsrp_commands(country_receivers)
+
+
 
 
 def print_cores():
