@@ -182,8 +182,24 @@ generate_mesh_wiring_commands(core_routers, country_routers)
 generate_hsrp_commands(country_routers)
 generate_receiver_hsrp_commands(country_receivers)
 
+tunnel_ip_seoul = "172.16.0.1"
+tunnel_ip_jeju  = "172.16.0.2"
+wan_ip_seoul_publica = "10.0.0.74"
+wan_ip_jeju_publica  = "10.0.0.78"
 
+core_routers["Core_1"].add_gre_tunnel(
+    tunnel_id=0,
+    tunnel_ip=tunnel_ip_seoul,
+    source_interface="5",
+    dest_wan_ip=wan_ip_jeju_publica
+)
 
+country_routers["Jeju_1"].add_gre_tunnel(
+    tunnel_id=0,
+    tunnel_ip=tunnel_ip_jeju,
+    source_interface="1",      
+    dest_wan_ip=wan_ip_seoul_publica
+)
 
 def print_cores():
     for key in core_routers:
